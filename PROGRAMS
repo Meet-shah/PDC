@@ -1,0 +1,851 @@
+1> ## MATRIX MUL ##
+
+#include<stdio.h>
+#include<omp.h>
+#include<stdlib.h>
+## MATRIX MULTIPLICATION ##
+
+#define A 10//NRA
+#define B 10//NCA
+#define C 10//NRB
+
+int main()
+{
+	int tid,nthreads,i,j,k,chunk;
+	double a[A][B],b[B][C],c[A][C];
+	chunk=10;
+
+	#pragma omp parallel shared(a,b,c,nthreads,chunk)
+
+	
+		tid=omp_get_thread_num();
+		if(tid==0)
+		{
+			nthreads=omp_get_num_threads();
+			printf("nthreads %dn",nthreads);
+			printf("genrating matrixn");
+		}
+		#pragma omp for schedule(static,chunk)
+		for(i=0;i<A;i++)
+		for(j=0;j<B;j++)
+		a[i][j]=i+j;
+		#pragma omp for schedule(static,chunk)
+		for(i=0;i<B;i++)
+		for(j=0;j<C;j++)
+		b[i][j]=i*j;
+		#pragma omp for schedule(static,chunk)
+		for(i=0;i<A;i++)
+		{
+		for(j=0;j<C;j++)
+		{
+		c[i][j]=0;
+		}
+		}
+printf("tid %dn",tid);
+		#pragma omp for schedule(static,chunk)
+		for(i=0;i<A;i++)
+		{
+			for(j=0;j<B;j++)
+			{
+				c[i][j]=c[i][j]+(a[i][j]*b[j][i]);
+			}
+		}
+		printf("matrix An");
+		for(i=0;i<A;i++)
+		{
+			for(j=0;j<B;j++)
+			{	
+				printf("%6.2f",a[i][j]);
+			}
+		printf("n");	
+		}
+		printf("matrix B n");
+		for(i=0;i<A;i++)
+		{
+			for(j=0;j<B;j++)
+			{	
+				printf("%6.2f",b[i][j]);
+			}
+		printf("n");	
+		}
+		printf("matrix Cn");
+		for(i=0;i<A;i++)
+		{
+			for(j=0;j<C;j++)
+			{	
+				printf("%6.2f",c[i][j]);
+			}
+		printf("n");	
+		}
+		
+return 0;
+}
+-------------------------------------------------------------------------------------------
+
+2) ## QUICK SORT ##
+
+#include<stdio.h>
+#include<omp.h>
+int k=0;
+quick(int number[10],int first,int last)
+{
+ int i,j,pivot,temp;
+if(first<last){
+      pivot=first;
+      i=first;
+      j=last;
+
+      while(i<j){
+         while(number[i]<=number[pivot]&&i<last)
+            i++;
+         while(number[j]>number[pivot])
+            j--;
+         if(i<j){  
+            temp=number[i];
+            number[i]=number[j];
+            number[j]=temp;
+        	 }
+      }
+	
+      temp=number[pivot];
+      number[pivot]=number[j];
+      number[j]=temp;
+	printf("threds %dn",k);
+#pragma omp parallel sections
+{
+	#pragma omp section	
+		{	
+			k=k+1;
+             	      quick(number,first,j-1);
+ 	 	}
+	#pragma omp section
+		{
+			k=k+1;
+     		quick(number,j+1,last);
+		}
+}
+}
+}
+int main()
+{
+	int i,a[10],n=10;
+	printf("enter 10  input in the array:");
+	for(i=0;i<n;i++)
+	{
+		scanf("%d",&a[i]);
+	}
+	quick(a,0,n-1);
+	printf("nsorted array:");		
+	for(i=0;i<n;i++)
+	{
+		printf("%d  ",a[i]);
+	}
+	return 0;
+}
+------------------------------------------------------
+## HELLO WORLD  IN OMP##
+
+#include<stdio.h>
+#include<omp.h>
+int main()
+{
+
+omp_set_num_threads(5);
+
+#pragma omp parallel
+{
+	int id;
+	id = omp_get_thread_num();
+	printf("Hello World : %d n",id);
+}
+}
+
+
+#include<stdio.h>
+#include<omp.h>
+int main()
+{
+omp_set_num_threads(10);
+#pragma omp parallel
+{
+int id;
+id=omp_get_thread_num();
+printf("hello world %dn",id);
+}
+}
+
+--------------------------------------------------
+3> ## PRIMS ALGO ##
+
+
+#include <stdio.h>
+#include <limits.h>
+
+
+// Number of vertices in the graph
+#define V 5
+
+// A utility function to find the vertex with minimum key value, from
+// the set of vertices not yet included in MST
+int minKey(int key[], bool mstSet[])
+{
+   // Initialize min value
+   int min = INT_MAX, min_index;
+
+   for (int v = 0; v < V; v++)
+     if (mstSet[v] == false && key[v] < min)
+         min = key[v], min_index = v;
+
+   return min_index;
+}
+
+// A utility function to print the constructed MST stored in parent[]
+int printMST(int parent[], int n, int graph[V][V])
+{
+   printf("Edge   Weight\n");
+
+   for (int i = 1; i < V; i++)
+      printf("Threads %d - %d - %d    %d \n", parent[i], i, graph[i][parent[i]]);
+}
+
+// Function to construct and print MST for a graph represented using adjacency
+// matrix representation
+void primMST(int graph[V][V])
+{
+     int parent[V]; // Array to store constructed MST
+     int key[V];   // Key values used to pick minimum weight edge in cut
+     bool mstSet[V];  // To represent set of vertices not yet included in MST
+
+     // Initialize all keys as INFINITE
+
+     for (int i = 0; i < V; i++)
+        key[i] = INT_MAX, mstSet[i] = false;
+
+     // Always include first 1st vertex in MST.
+     key[0] = 0;     // Make key 0 so that this vertex is picked as first vertex
+     parent[0] = -1; // First node is always root of MST
+
+     // The MST will have V vertices
+
+     for (int count = 0; count < V-1; count++)
+     {
+        // Pick thd minimum key vertex from the set of vertices
+        // not yet included in MST
+        int u = minKey(key, mstSet);
+
+        // Add the picked vertex to the MST Set
+        mstSet[u] = true;
+
+        // Update key value and parent index of the adjacent vertices of
+        // the picked vertex. Consider only those vertices which are not yet
+        // included in MST
+
+        for (int v = 0; v < V; v++)
+
+           // graph[u][v] is non zero only for adjacent vertices of m
+           // mstSet[v] is false for vertices not yet included in MST
+           // Update the key only if graph[u][v] is smaller than key[v]
+          if (graph[u][v] && mstSet[v] == false && graph[u][v] <  key[v])
+             parent[v]  = u, key[v] = graph[u][v];
+     }
+
+     // print the constructed MST
+     printMST(parent, V, graph);
+}
+
+
+// driver program to test above function
+int main()
+{
+   /* Let us create the following graph
+          2    3
+      (0)--(1)--(2)
+       |   / \   |
+      6| 8/   \5 |7
+       | /     \ |
+      (3)-------(4)
+            9          */
+   int graph[V][V] = {{0, 2, 0, 6, 0},
+                      {2, 0, 3, 8, 5},
+                      {0, 3, 0, 0, 7},
+                      {6, 8, 0, 0, 9},
+                      {0, 5, 7, 9, 0},
+                     };
+
+    // Print the solution
+    primMST(graph);
+
+    return 0;
+}
+
+----------------------------------------------------------------------------------------------
+4> DIJIKTSTRA ALGO ####
+
+#define LARGEINT 2<<30-1  // "infinity"
+#define NV 6
+
+// global variables, all shared by all threads by default
+
+int ohd[NV][NV],  // 1-hop distances between vertices
+mind[NV],  // min distances found so far
+notdone[NV], // vertices not checked yet
+nth,  // number of threads
+chunk,  // number of vertices handled by each thread
+md,  // current min over all threads
+mv;  // vertex which achieves that min
+
+void init(int ac, char **av)
+{  int i,j;
+for (i = 0; i < NV; i++)  
+  for (j = 0; j < NV; j++)  {
+     if (j == i) ohd[i][i] = 0;
+     else ohd[i][j] = LARGEINT;
+  }
+ohd[0][1] = ohd[1][0] = 40;
+ohd[0][2] = ohd[2][0] = 15;
+ohd[1][2] = ohd[2][1] = 20;
+ohd[1][3] = ohd[3][1] = 10;
+ohd[1][4] = ohd[4][1] = 25;
+ohd[2][3] = ohd[3][2] = 100;
+ohd[1][5] = ohd[5][1] = 6;
+ohd[4][5] = ohd[5][4] = 8;
+for (i = 1; i < NV; i++)  {
+  notdone[i] = 1;
+  mind[i] = ohd[0][i];
+}
+}
+
+// finds closest to 0 among notdone, among s through e
+void findmymin(int s, int e, int *d, int *v)
+{  int i;
+  *d = LARGEINT; 
+  for (i = s; i <= e; i++)
+     if (notdone[i] && mind[i] < *d)  {
+        *d = ohd[0][i];
+        *v = i;
+     }
+}
+
+// for each i in [s,e], ask whether a shorter path to i exists, through
+// mv
+void updateohd(int s, int e)
+{  int i;
+   for (i = s; i <= e; i++)
+      if (mind[mv] + ohd[mv][i] < mind[i])  
+     mind[i] = mind[mv] + ohd[mv][i];
+}
+
+void dowork()
+{  
+   #pragma omp parallel  // Note 1  
+   {  int startv,endv,  // start, end vertices for this thread
+      step,  // whole procedure goes NV steps
+      mymd,  // min value found by this thread
+      mymv,  // vertex which attains that value
+      me = omp_get_thread_num();  // my thread number
+      #pragma omp single   // Note 2
+      {  nth = omp_get_num_threads();  chunk = NV/nth;  
+     printf("there are %d threads\n",nth);  }
+      // Note 3
+      startv = me * chunk; 
+      endv = startv + chunk - 1;
+      for (step = 0; step < NV; step++)  {
+     // find closest vertex to 0 among notdone; each thread finds
+     // closest in its group, then we find overall closest
+     #pragma omp single 
+     {  md = LARGEINT; mv = 0;  }
+     findmymin(startv,endv,&mymd,&mymv);
+     // update overall min if mine is smaller
+     #pragma omp critical  // Note 4
+     {  if (mymd < md)  
+          {  md = mymd; mv = mymv;  }
+     }
+     // mark new vertex as done 
+     #pragma omp single 
+     {  notdone[mv] = 0;  }
+     // now update my section of ohd
+     updateohd(startv,endv);
+     #pragma omp barrier 
+      }
+   }
+}
+
+int main(int argc, char **argv)
+{  int i;
+   init(argc,argv);
+   dowork();  
+   // back to single thread now
+   printf("minimum distances:\n");
+   for (i = 1; i < NV; i++)
+      printf("%d\n",mind[i]);
+}
+
+
+
+------------------------------------------------------------------------------
+
+
+
+5. PRODUCER CONSUMER
+
+# include <stdio.h>
+# include <pthread.h>
+# define max 10
+
+void *Producer();
+void *Consumer();
+int i=1;
+
+int main()
+{    
+	pthread_t ptid,ctid;
+    
+ 
+	pthread_create(&ptid,NULL,Producer,NULL);
+	pthread_create(&ctid,NULL,Consumer,NULL);
+    
+	pthread_join(ptid,NULL);
+	pthread_join(ctid,NULL);
+ pthread_exit(0);  	 
+    
+	return 0;
+}
+
+void *Producer()
+{    
+	for(i=1;i<max;i++)
+	{
+    printf("Produce %d \n",i);
+	}    
+    
+}
+
+void *Consumer()
+{
+    	for(i=max-1;i>=1;i--)
+	{
+    printf("Consume %d \n",i);
+	}    
+
+    
+}
+
+
+
+
+----------------------------------------------------------------------------------------------------------------------------
+6> PRODUCER CONSUMER MUTEX
+
+# include <stdio.h>
+# include <pthread.h>
+# define MAX 10
+int buffer=0;
+
+void *Producer();
+void *Consumer();
+
+
+pthread_cond_t condc=PTHREAD_COND_INITIALIZER;
+pthread_cond_t condp=PTHREAD_COND_INITIALIZER;
+pthread_mutex_t mVar=PTHREAD_MUTEX_INITIALIZER;
+
+
+int main()
+{
+    pthread_t ptid,ctid;
+
+
+
+    pthread_create(&ptid,NULL,Producer,NULL);
+    pthread_create(&ctid,NULL,Consumer,NULL);
+
+    pthread_join(ptid,NULL);
+    pthread_join(ctid,NULL);
+    pthread_cond_destroy(&condp);
+    pthread_cond_destroy(&condc);
+    pthread_mutex_destroy(&mVar);
+
+
+
+
+    return 0;
+}
+
+
+
+void *Producer()
+{    int i;
+    for(i=1;i<MAX;i++)
+    {
+        pthread_mutex_lock(&mVar);
+        while(buffer!=0)
+        {
+            pthread_cond_wait(&condp,&mVar);
+        }
+      buffer=i;
+        pthread_cond_signal(&condc,&mVar);
+        pthread_mutex_unlock(&mVar);
+
+    }
+    pthread_exit(0);
+}
+
+
+void *Consumer()
+{    int i;
+    for(i=1;i<MAX;i++)
+    {
+        pthread_mutex_lock(&mVar);
+        while(buffer==0)
+        {
+            pthread_cond_wait(&condc,&mVar);
+        }
+      buffer=0;
+        pthread_cond_signal(&condp,&mVar);
+        pthread_mutex_unlock(&mVar);
+
+    }
+    pthread_exit(0);
+}
+}
+--------------------------------------------------------------------------------
+
+7) PI CALCULATION
+
+#include <stdio.h>
+#include <omp.h>
+int main() {
+const int numThreads = 24;
+const int numPoints = 10000000;
+const double deltaX = 1.0/(double)numPoints;
+double pi = 0.0;
+omp_set_num_threads(numThreads);
+double components[numThreads];
+#pragma omp parallel shared(components)
+{
+const int nt = omp_get_num_threads();
+const int pointsPerThread = numPoints/nt;
+const int threadId = omp_get_thread_num();
+components[threadId] = 0.0;
+double xi = (0.5 + pointsPerThread * threadId) * deltaX;
+for(int i = 0; i < pointsPerThread; ++i)
+{
+components[threadId] += 4.0/(1 + xi * xi);
+xi += deltaX;
+}
+}
+for(int i = 0; i < numThreads; ++i)
+pi += components[i];
+pi *= deltaX;
+printf("Value of pi: %.10g\n", pi);
+return 0;
+}
+-------------------------------------------------------------------
+
+8. CLIENT -SERVER SIMPLE
+
+ 
+import java.io.*;  
+import java.net.*;  
+public class server {  
+public static void main(String[] args){  
+try{  
+ServerSocket ss=new ServerSocket(6666);  
+Socket s=ss.accept();//establishes connection   
+DataInputStream dis=new DataInputStream(s.getInputStream());  
+String  str=(String)dis.readUTF();  
+System.out.println("message= "+str);  
+ss.close();  
+}catch(Exception e){System.out.println(e);}  
+}  
+}  
+
+
+import java.io.*;  
+import java.net.*;  
+public class client {  
+public static void main(String[] args) {  
+try{      
+Socket s=new Socket("localhost",6666);  
+DataOutputStream dout=new DataOutputStream(s.getOutputStream());  
+dout.writeUTF("Hello Server");  
+dout.flush();  
+dout.close();  
+s.close();  
+}catch(Exception e){System.out.println(e);}  
+}  
+} 
+
+
+-----------------------------------------------------------
+
+
+9> RPC CALCULATOR
+
+--- CLIENT.C----
+#include "calculate.h"
+ 
+ 
+float calculate_prog_1(char *host,float n1,float n2,char opr,CLIENT *clnt)
+{
+  
+ float *result_1;
+ inputs add_1_arg;
+ float *result_2;
+ inputs sub_1_arg;
+ float *result_3;
+ inputs mul_1_arg;
+ float *result_4;
+ inputs div_1_arg;
+ 
+if(opr=='+'){
+ 
+ add_1_arg.num1=n1;
+ add_1_arg.num2=n2;
+ add_1_arg.operator=opr;
+  
+ result_1 = add_1(&add_1_arg, clnt);
+ if (result_1 == (float *) NULL) {
+ clnt_perror (clnt, "call failed");
+ }
+ return *result_1;
+}
+ 
+else if(opr=='-'){
+ 
+ sub_1_arg.num1=n1;
+ sub_1_arg.num2=n2;
+ sub_1_arg.operator=opr;
+  
+ result_2 = sub_1(&sub_1_arg, clnt);
+ if (result_2 == (float *) NULL) {
+ clnt_perror (clnt, "call failed");
+ }
+ return *result_2;
+}
+ 
+else if(opr=='*'){
+ 
+ mul_1_arg.num1=n1;
+ mul_1_arg.num2=n2;
+ mul_1_arg.operator=opr;
+  
+ result_3 = mul_1(&mul_1_arg, clnt);
+ if (result_3 == (float *) NULL) {
+ clnt_perror (clnt, "call failed");
+ }
+ return *result_3;
+}
+ 
+else if(opr=='/'){
+ 
+ div_1_arg.num1=n1;
+ div_1_arg.num2=n2;
+ div_1_arg.operator=opr;
+  
+ if(n2 == 0){
+ printf("Division by zero is not valid.\n");
+ exit(0);
+ }else{
+  
+ result_4 = div_1(&div_1_arg, clnt);
+ if (result_4 == (float *) NULL) {
+ clnt_perror (clnt, "call failed");
+ }
+ return *result_4;
+ }
+}
+}
+ 
+int main (int argc, char *argv[])
+{
+ char *host;
+ float a,b;
+ char op;
+ CLIENT *clnt;
+ 
+ if (argc < 2) {
+ printf ("usage: %s server_host\n", argv[0]);
+ exit (1);
+ }
+  
+ printf("Welcome to Quick Cal!!!\n");
+ printf("+ for Addition\n- for Substraction\n* for Multiplication\n/ for Division\n");
+ printf("Enter number 1 :\n");
+ scanf("%f",&a);
+ printf("Enter number 2 :\n");
+ scanf("%f",&b);
+ printf("Enter the Operator :\n");
+ scanf("%s",&op);
+  
+ host = argv[1];
+  
+ clnt = clnt_create (host, CALCULATE_PROG, CALCULATE_VER, "udp");
+  
+ if (clnt == NULL) {
+ clnt_pcreateerror (host);
+ exit (1);
+ }
+  
+ printf("The Answer = %f\n",calculate_prog_1 (host,a,b,op,clnt));
+  
+ clnt_destroy (clnt);
+  
+exit (0);
+}
+---- SERVER.C-------
+
+#include "calculate.h"
+ 
+float * add_1_svc(inputs *argp, struct svc_req *rqstp)
+{
+ static float result;
+ 
+ result = argp->num1+argp->num2;
+ printf("Got Request : Adding %f and %f\n",argp->num1,argp->num2);
+ printf("Sent Response : %f\n",result);
+ 
+ return &result;
+}
+ 
+float * sub_1_svc(inputs *argp, struct svc_req *rqstp)
+{
+ static float result;
+ 
+ result = argp->num1-argp->num2;
+ printf("Got Request : substituting %f from %f\n",argp->num2,argp->num1);
+ printf("Sent Response : %f\n",result);
+ 
+ return &result;
+}
+ 
+float * mul_1_svc(inputs *argp, struct svc_req *rqstp)
+{
+ static float result;
+ 
+ result = argp->num1*argp->num2;
+ printf("Got Request : Multiplying %f by %f\n",argp->num1,argp->num2);
+ printf("Sent Response : %f\n",result);
+ 
+ return &result;
+}
+ 
+float * div_1_svc(inputs *argp, struct svc_req *rqstp)
+{
+ static float result;
+ 
+ result = argp->num1/argp->num2;
+ printf("Got Request : Dividing %f by %f\n",argp->num1,argp->num2);
+ printf("Sent Response : %f\n",result);
+ 
+ return &result;
+}
+
+-----------------------------------------------------
+
+10> RMI
+
+  10.1> INTERFACE.JAVA
+  
+  
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+/**
+ *
+ * @author mobs
+ */
+public interface RMI extends Remote {
+    public String getData(String text)throws RemoteException;
+    
+}
+10.2> CLIENT.JAVA
+
+
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+
+public class RMIClient {
+    public static void main(String args[])
+    {
+    RMIClient client=new RMIClient();
+    client.connectServer();
+    }
+
+    private void connectServer() {
+        try{
+    Registry reg=LocateRegistry.getRegistry("127.0.0.1",1099);
+    RMI rmi =(RMI) reg.lookup("server");
+    System.out.println("connected to server");
+    String text=rmi.getData("Parul University");
+    System.out.println(text);
+    }
+    catch (Exception e){
+        System.out.println(e);
+    }
+    }
+}
+
+10.3 > SERVER.JAVA
+
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
+
+public class RMIServer extends UnicastRemoteObject implements RMI
+{
+public RMIServer()throws RemoteException{
+    super();
+}
+@Override 
+    public String getData(String text) throws RemoteException {
+        text = "Hi" + text;
+        return text;//To change body of generated methods, choose Tools | Templates.
+    }
+    public static void main(String args[])
+    {
+    try{
+    Registry reg=LocateRegistry.createRegistry(1099);
+    reg.rebind("server", new RMIServer());
+    System.out.println("server has started");
+    }
+    catch (Exception e){
+        System.out.println(e);
+    }
+    }
+}
+
+---------------------------------------------
+## EXTRA ##
+#include <stdio.h>
+#include <omp.h>
+
+int main(int argc, char **argv){
+
+int i, thread_id,nloops;
+#pragma omp parallel private(thread_id,nloops)
+{
+
+nloops = 0;
+
+#pragma omp for
+for(i = 0; i<100;i++){
+++nloops;
+}
+thread_id = omp_get_thread_num();
+printf("Thread %d performed % iteratrion of loop \n",thread_id,nloops);
+}
+return 0;
+
+}
+
+
+
+--------------------------------------------------------------------------
